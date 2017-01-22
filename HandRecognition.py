@@ -164,7 +164,9 @@ def remove_bg(frame):
 # Called for every client connecting (after handshake)
 def new_client(client, server):
     global bg_model, frame_gesture, GestureDictionary
-    start = True
+    lock = False
+    count = 0
+    sampling = {'One':0,'Two':0,'Three':0,'Five':0,'Zero':0}
     print("New client connected and was given id %d" % client['id'])
     server.send_message_to_all("Hey all, a new client has joined us")
     camera = cv2.VideoCapture(0)
@@ -172,6 +174,7 @@ def new_client(client, server):
     bg_captured=0
     GestureDictionary=DefineGestures()
     frame_gesture=Gesture("frame_gesture")
+    previous_gesture_found = None
 
     while(not stop):
         ret, frame = camera.read()
@@ -204,16 +207,36 @@ def new_client(client, server):
                 if(hand_size_score):
                     frame,finger,palm=mark_fingers(frame,hand_convex_hull,hand_center,hand_radius)
                     frame,gesture_found=find_gesture(frame,finger,palm)
-                    if (gesture_found == 'Fist_Close'):
-                        server.send_message_to_all('zoom-in')
-                    elif (gesture_found == 'Middle_Finger'):
-                        server.send_message_to_all('close')
-                    elif (gesture_found == 'Open_Fist'):
-                        server.send_message_to_all('zoom-out')
-                    elif (gesture_found == 'V'):
-                        server.send_message_to_all('scroll-down')
-                    elif (gesture_found == 'Loser'):
-                        server.send_message_to_all('scroll-up')
+
+                    if (count != 5):
+                        if gesture_found != 'NONE':
+                            count += 1
+                            sampling[gesture_found] += 1
+                    else:
+                        max_sampling = max(sampling.values())
+                        print (max_sampling)
+                        d2 = dict((v, k) for k, v in sampling.iteritems())
+                        gesture_found = d2[max_sampling] 
+
+                        if client is not None:  
+                            print (gesture_found)
+                            if (not lock):
+                                if (gesture_found == 'Five'):
+                                    server.send_message_to_all('zoom-in')
+                                elif (gesture_found == 'One'):
+                                    server.send_message_to_all('scroll-up')
+                                elif (gesture_found == 'Three'):
+                                    server.send_message_to_all('zoom-out')
+                                elif (gesture_found == 'Two'):
+                                    server.send_message_to_all('scroll-down')
+                                if gesture_found != 'Zero':
+                                    lock = True
+                            elif gesture_found == 'Zero':
+                                lock = False
+                                print "released lock"
+                        sampling = {'One':0,'Two':0,'Three':0,'Five':0,'Zero':0}
+                        count = 0
+                        
             else:
                 frame=frame_original
 
