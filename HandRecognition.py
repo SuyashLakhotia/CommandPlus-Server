@@ -225,7 +225,7 @@ def new_client(client, server):
         else:
             frame = hand_threshold(fg_frame, hand_histogram)
             contour_frame = np.copy(frame)
-            contours, hierarchy = cv2.findContours(
+            _, contours, hierarchy = cv2.findContours(
                 contour_frame, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             found, hand_contour = hand_contour_find(contours)
             if(found):
@@ -285,7 +285,7 @@ def new_client(client, server):
                     frame_original, box_pos_x, box_pos_y)
         # Capture background by pressing 'b'
         elif interrupt & 0xFF == ord('b'):
-            bg_model = cv2.BackgroundSubtractorMOG2(0, 10)
+            bg_model = cv2.createBackgroundSubtractorMOG2(0, 10)
             bg_captured = 1
         # Reset captured hand by pressing 'r'
         elif interrupt & 0xFF == ord('r'):
